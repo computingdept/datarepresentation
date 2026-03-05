@@ -184,6 +184,13 @@
       color: var(--muted);
       font-size: 0.9rem;
     }
+
+    /* section divider */
+    .sectionTitle{
+      margin: 18px 0 8px;
+      font-size: 1.2rem;
+      font-weight: 900;
+    }
   </style>
 </head>
 <body>
@@ -199,10 +206,12 @@
     <div class="rulebox">
       <b>Rules to use</b>
       <ul>
-        <li><b>File size (bits)</b> = width × height × colour depth</li>
+        <li><b>Image file size (bits)</b> = width × height × colour depth</li>
+        <li><b>Sound file size (bits)</b> = sample rate × sample resolution × time (seconds) × channels</li>
         <li><b>Bytes</b> = bits ÷ 8</li>
         <li><b>Kilobytes (KB)</b> = bytes ÷ 1000</li>
         <li><b>Colour depth</b> = log<sub>2</sub>(number of colours) (e.g., 16 colours → 4 bits)</li>
+        <li><b>Channels</b>: mono = 1, stereo = 2</li>
       </ul>
     </div>
 
@@ -211,10 +220,14 @@
       <button id="btnShowAll" type="button">Show all answers</button>
       <button id="btnHideAll" type="button">Hide all answers</button>
       <button id="btnReset" type="button">Reset</button>
-      <div class="score" id="score">Score: 0 / 10</div>
+      <div class="score" id="score">Score: 0 / 20</div>
     </div>
 
+    <div class="sectionTitle">Image questions (10)</div>
     <div class="grid" id="questions"></div>
+
+    <div class="sectionTitle">Sound questions (10)</div>
+    <div class="grid" id="soundQuestions"></div>
   </div>
 
   <footer>
@@ -256,10 +269,14 @@
     return { pixels, bits, bytes, kb };
   }
 
-  // ---------- question bank ----------
-  // Each question can ask for multiple outputs:
-  // outputs: { key: { label, unit, answer } }
-  // Score: 1 point per question if ALL required outputs are correct (simple GCSE-friendly)
+  function calcSound(sampleRate, sampleResBits, seconds, channels){
+    const bits = sampleRate * sampleResBits * seconds * channels;
+    const bytes = bits / 8;
+    const kb = bytes / 1000;
+    return { bits, bytes, kb };
+  }
+
+  // ---------- IMAGE question bank ----------
   const qs = [
     {
       id: 1,
@@ -268,9 +285,7 @@
       tip: "Use width × height × colour depth. Then convert if needed.",
       outputs: () => {
         const s = calcImage(100,100,8);
-        return {
-          bits: { label: "File size", unit: "bits", answer: s.bits }
-        };
+        return { bits: { label: "File size", unit: "bits", answer: s.bits } };
       },
       steps: () => {
         const s = calcImage(100,100,8);
@@ -312,16 +327,12 @@
         return `Pixels = 100 × 100 = ${s.pixels}\nBits = ${s.pixels} × 8 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}\nKB = ${s.bytes} ÷ 1000 = ${s.kb}`;
       }
     },
-
-    // colour depth only (no bits/bytes/kb here — but still "bits" (depth) is relevant)
     {
       id: 4,
       tag: "Colour depth",
       text: "An image uses 16 colours. Calculate the colour depth in bits.",
       tip: "Find the power of 2: 16 = 2⁴.",
-      outputs: () => ({
-        depth: { label: "Colour depth", unit: "bits", answer: 4 }
-      }),
+      outputs: () => ({ depth: { label: "Colour depth", unit: "bits", answer: 4 } }),
       steps: () => `16 colours = 2⁴\nColour depth = 4 bits`
     },
     {
@@ -329,9 +340,7 @@
       tag: "Colour depth",
       text: "An image uses 256 colours. Calculate the colour depth in bits.",
       tip: "256 = 2⁸.",
-      outputs: () => ({
-        depth: { label: "Colour depth", unit: "bits", answer: 8 }
-      }),
+      outputs: () => ({ depth: { label: "Colour depth", unit: "bits", answer: 8 } }),
       steps: () => `256 colours = 2⁸\nColour depth = 8 bits`
     },
     {
@@ -339,13 +348,9 @@
       tag: "Colour depth",
       text: "An image uses 4 colours. Calculate the colour depth in bits.",
       tip: "4 = 2².",
-      outputs: () => ({
-        depth: { label: "Colour depth", unit: "bits", answer: 2 }
-      }),
+      outputs: () => ({ depth: { label: "Colour depth", unit: "bits", answer: 2 } }),
       steps: () => `4 colours = 2²\nColour depth = 2 bits`
     },
-
-    // mixed: colours + size; these ask for bits/bytes/KB explicitly (multi-field)
     {
       id: 7,
       tag: "Mixed (bits + bytes)",
@@ -388,9 +393,7 @@
       tip: "8 colours = 3 bits. Then ÷ 8.",
       outputs: () => {
         const s = calcImage(100,100,3);
-        return {
-          bytes: { label: "File size", unit: "bytes", answer: s.bytes }
-        };
+        return { bytes: { label: "File size", unit: "bytes", answer: s.bytes } };
       },
       steps: () => {
         const s = calcImage(100,100,3);
@@ -416,11 +419,172 @@
     },
   ];
 
+  // ---------- SOUND question bank (10) ----------
+  // Keep numbers clean to divide by 8 and 1000.
+  // Formula: bits = sampleRate × sampleResolution × seconds × channels
+  const soundQs = [
+    {
+      id: 11,
+      tag: "Sound (bits)",
+      text: "A sound recording has sample rate 1000 Hz, sample resolution 8 bits, length 10 s, mono. Calculate the file size in bits.",
+      tip: "bits = sample rate × resolution × time × channels (mono = 1).",
+      outputs: () => {
+        const s = calcSound(1000, 8, 10, 1);
+        return { bits: { label: "File size", unit: "bits", answer: s.bits } };
+      },
+      steps: () => {
+        const s = calcSound(1000, 8, 10, 1);
+        return `Bits = 1000 × 8 × 10 × 1 = ${s.bits}`;
+      }
+    },
+    {
+      id: 12,
+      tag: "Sound (bytes)",
+      text: "A sound recording has sample rate 1000 Hz, sample resolution 8 bits, length 10 s, mono. Calculate the file size in bytes.",
+      tip: "Find bits first, then ÷ 8.",
+      outputs: () => {
+        const s = calcSound(1000, 8, 10, 1);
+        return {
+          bits:  { label: "Working (optional)", unit: "bits", answer: s.bits, optional: true },
+          bytes: { label: "Final answer", unit: "bytes", answer: s.bytes }
+        };
+      },
+      steps: () => {
+        const s = calcSound(1000, 8, 10, 1);
+        return `Bits = 1000 × 8 × 10 × 1 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}`;
+      }
+    },
+    {
+      id: 13,
+      tag: "Sound (KB)",
+      text: "A sound recording has sample rate 1000 Hz, sample resolution 8 bits, length 10 s, mono. Calculate the file size in KB.",
+      tip: "bits → bytes → KB (÷ 8 then ÷ 1000).",
+      outputs: () => {
+        const s = calcSound(1000, 8, 10, 1);
+        return {
+          bits:  { label: "Working (optional)", unit: "bits",  answer: s.bits,  optional: true },
+          bytes: { label: "Working (optional)", unit: "bytes", answer: s.bytes, optional: true },
+          kb:    { label: "Final answer",       unit: "KB",    answer: s.kb }
+        };
+      },
+      steps: () => {
+        const s = calcSound(1000, 8, 10, 1);
+        return `Bits = 1000 × 8 × 10 × 1 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}\nKB = ${s.bytes} ÷ 1000 = ${s.kb}`;
+      }
+    },
+    {
+      id: 14,
+      tag: "Sound (stereo bits)",
+      text: "A sound recording has sample rate 1000 Hz, sample resolution 8 bits, length 10 s, stereo. Calculate the file size in bits.",
+      tip: "Stereo = 2 channels.",
+      outputs: () => {
+        const s = calcSound(1000, 8, 10, 2);
+        return { bits: { label: "File size", unit: "bits", answer: s.bits } };
+      },
+      steps: () => {
+        const s = calcSound(1000, 8, 10, 2);
+        return `Stereo = 2 channels\nBits = 1000 × 8 × 10 × 2 = ${s.bits}`;
+      }
+    },
+    {
+      id: 15,
+      tag: "Sound (stereo bytes)",
+      text: "A sound recording has sample rate 2000 Hz, sample resolution 8 bits, length 10 s, stereo. Calculate the file size in bytes.",
+      tip: "Find bits first, then ÷ 8.",
+      outputs: () => {
+        const s = calcSound(2000, 8, 10, 2);
+        return { bytes: { label: "File size", unit: "bytes", answer: s.bytes } };
+      },
+      steps: () => {
+        const s = calcSound(2000, 8, 10, 2);
+        return `Bits = 2000 × 8 × 10 × 2 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}`;
+      }
+    },
+    {
+      id: 16,
+      tag: "Sound (bytes)",
+      text: "A sound recording has sample rate 1000 Hz, sample resolution 16 bits, length 10 s, mono. Calculate the file size in bytes.",
+      tip: "16-bit resolution doubles the bits compared to 8-bit.",
+      outputs: () => {
+        const s = calcSound(1000, 16, 10, 1);
+        return { bytes: { label: "File size", unit: "bytes", answer: s.bytes } };
+      },
+      steps: () => {
+        const s = calcSound(1000, 16, 10, 1);
+        return `Bits = 1000 × 16 × 10 × 1 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}`;
+      }
+    },
+    {
+      id: 17,
+      tag: "Sound (KB)",
+      text: "A sound recording has sample rate 2000 Hz, sample resolution 8 bits, length 5 s, mono. Calculate the file size in KB.",
+      tip: "Shorter time reduces the size.",
+      outputs: () => {
+        const s = calcSound(2000, 8, 5, 1);
+        return { kb: { label: "File size", unit: "KB", answer: s.kb } };
+      },
+      steps: () => {
+        const s = calcSound(2000, 8, 5, 1);
+        return `Bits = 2000 × 8 × 5 × 1 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}\nKB = ${s.bytes} ÷ 1000 = ${s.kb}`;
+      }
+    },
+    {
+      id: 18,
+      tag: "Sound (bits + bytes)",
+      text: "A sound recording has sample rate 1000 Hz, sample resolution 8 bits, length 20 s, mono. Calculate the file size in bits and bytes.",
+      tip: "Do bits first, then ÷ 8.",
+      outputs: () => {
+        const s = calcSound(1000, 8, 20, 1);
+        return {
+          bits:  { label: "File size", unit: "bits",  answer: s.bits },
+          bytes: { label: "File size", unit: "bytes", answer: s.bytes }
+        };
+      },
+      steps: () => {
+        const s = calcSound(1000, 8, 20, 1);
+        return `Bits = 1000 × 8 × 20 × 1 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}`;
+      }
+    },
+    {
+      id: 19,
+      tag: "Sound (bits + bytes + KB)",
+      text: "A sound recording has sample rate 2000 Hz, sample resolution 8 bits, length 10 s, stereo. Calculate the file size in bits, bytes and KB.",
+      tip: "Stereo = 2 channels.",
+      outputs: () => {
+        const s = calcSound(2000, 8, 10, 2);
+        return {
+          bits:  { label: "File size", unit: "bits",  answer: s.bits },
+          bytes: { label: "File size", unit: "bytes", answer: s.bytes },
+          kb:    { label: "File size", unit: "KB",    answer: s.kb }
+        };
+      },
+      steps: () => {
+        const s = calcSound(2000, 8, 10, 2);
+        return `Stereo = 2 channels\nBits = 2000 × 8 × 10 × 2 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}\nKB = ${s.bytes} ÷ 1000 = ${s.kb}`;
+      }
+    },
+    {
+      id: 20,
+      tag: "Sound (KB)",
+      text: "A sound recording has sample rate 4000 Hz, sample resolution 8 bits, length 5 s, mono. Calculate the file size in KB.",
+      tip: "Higher sample rate increases the size.",
+      outputs: () => {
+        const s = calcSound(4000, 8, 5, 1);
+        return { kb: { label: "File size", unit: "KB", answer: s.kb } };
+      },
+      steps: () => {
+        const s = calcSound(4000, 8, 5, 1);
+        return `Bits = 4000 × 8 × 5 × 1 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}\nKB = ${s.bytes} ÷ 1000 = ${s.kb}`;
+      }
+    },
+  ];
+
   // ---------- render ----------
   const host = document.getElementById("questions");
+  const hostSound = document.getElementById("soundQuestions");
 
-  function render(){
-    host.innerHTML = qs.map(q => {
+  function renderList(list, mount){
+    mount.innerHTML = list.map(q => {
       const outs = q.outputs();
       const fieldsHtml = Object.entries(outs).map(([key, o]) => {
         const optText = o.optional ? " (optional)" : "";
@@ -466,13 +630,16 @@
     }).join("");
   }
 
-  render();
+  renderList(qs, host);
+  renderList(soundQs, hostSound);
 
   // ---------- checking ----------
+  const allQs = [...qs, ...soundQs];
+
   function checkAll(){
     let score = 0;
 
-    qs.forEach(q => {
+    allQs.forEach(q => {
       const outs = q.outputs();
       const fb = document.getElementById(`fb_${q.id}`);
       const mini = document.getElementById(`mini_${q.id}`);
@@ -480,30 +647,20 @@
       let allRequiredCorrect = true;
       let anyMissingRequired = false;
 
-      const requiredChecks = [];
-
       for(const [key, o] of Object.entries(outs)){
         const inp = document.getElementById(`ans_${q.id}_${key}`);
         const userVal = cleanNumber(inp.value);
 
-        if(o.optional){
-          // Optional fields never block a correct mark; ignore if blank
-          if(String(inp.value).trim() !== "" && Number.isFinite(userVal)){
-            // (Optional) could add feedback per-field, but keeping simple
-          }
-          continue;
-        }
+        if(o.optional) continue;
 
         if(!Number.isFinite(userVal)){
           anyMissingRequired = true;
           allRequiredCorrect = false;
-          requiredChecks.push({ ok:false, msg:`Missing ${o.unit}` });
           continue;
         }
 
         const ok = approxEqual(userVal, o.answer);
         if(!ok) allRequiredCorrect = false;
-        requiredChecks.push({ ok, msg:`${o.unit}` });
       }
 
       if(anyMissingRequired){
@@ -521,23 +678,22 @@
       } else {
         fb.textContent = "✗ Not quite — check your conversions.";
         fb.className = "feedback bad";
-        // quick hint
         const needsKb = Object.values(outs).some(o => !o.optional && String(o.unit).toLowerCase() === "kb");
         mini.textContent = needsKb ? "Hint: bits → bytes (÷8) → KB (÷1000)." : "Hint: calculate bits first, then convert.";
       }
     });
 
-    document.getElementById("score").textContent = `Score: ${score} / ${qs.length}`;
+    document.getElementById("score").textContent = `Score: ${score} / ${allQs.length}`;
   }
 
   function setAllDetails(open){
-    qs.forEach(q => {
+    allQs.forEach(q => {
       document.getElementById(`det_${q.id}`).open = open;
     });
   }
 
   function resetAll(){
-    qs.forEach(q => {
+    allQs.forEach(q => {
       const outs = q.outputs();
       for(const key of Object.keys(outs)){
         const el = document.getElementById(`ans_${q.id}_${key}`);
@@ -550,7 +706,7 @@
       mini.textContent = "";
       document.getElementById(`det_${q.id}`).open = false;
     });
-    document.getElementById("score").textContent = `Score: 0 / ${qs.length}`;
+    document.getElementById("score").textContent = `Score: 0 / ${allQs.length}`;
   }
 
   document.getElementById("btnCheck").addEventListener("click", checkAll);
