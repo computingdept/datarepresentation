@@ -96,19 +96,43 @@
       font-size: 1.03rem;
       font-weight: 800;
     }
+    .tag{
+      font-weight:800;
+      color: var(--warn);
+      background:#fff2a6;
+      border:2px solid var(--border);
+      border-radius:999px;
+      padding: 6px 10px;
+      font-size:0.85rem;
+      align-self:flex-start;
+    }
     .tip{
       margin: 6px 0 10px;
       color: var(--muted);
       font-size: 0.95rem;
     }
-    .row{
-      display:flex;
+
+    .inputs{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .field{
+      display:flex;
+      gap: 8px;
+      align-items:center;
+      flex-wrap:wrap;
+      background:#fffdf0;
+      border: 2px solid #eadb8a;
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .field label{
+      font-weight: 800;
     }
     input[type="text"]{
-      width: 260px;
+      width: 160px;
       max-width: 100%;
       padding: 10px 12px;
       border: 2px solid #cfcfcf;
@@ -116,15 +140,23 @@
       font-size: 1rem;
     }
     .unit{
-      font-weight: 700;
+      font-weight: 800;
       color: var(--muted);
     }
+
     .feedback{
       margin-top: 10px;
-      font-weight: 700;
+      font-weight: 800;
     }
     .feedback.good{ color: var(--good); }
     .feedback.bad{ color: var(--bad); }
+
+    .mini{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
     details{
       margin-top: 10px;
       border-top: 1px dashed var(--border);
@@ -157,7 +189,10 @@
 <body>
   <header>
     <h1>OCR J277 – Image Size & Colour Depth (Auto Check)</h1>
-    <p class="sub">Type your answers, then click <b>Check answers</b>. Use simple conversions: ÷ 8 and ÷ 1000.</p>
+    <p class="sub">
+      Answer what the question asks for — <b>bits</b>, <b>bytes</b> and/or <b>KB</b>.
+      Use simple conversions: ÷ 8 and ÷ 1000.
+    </p>
   </header>
 
   <div class="wrap">
@@ -184,17 +219,17 @@
 
   <footer>
     <div>
-      Tip for students: keep your working as <span class="mono">bits → bytes → KB</span> and you’ll almost never drop marks.
+      Tip: Write working in order: <span class="mono">bits → bytes → KB</span>.
+      Even if you only need one unit, calculating bits first usually keeps it tidy.
     </div>
   </footer>
 
 <script>
-  // Helpers
+  // ---------- helpers ----------
   function cleanNumber(str){
     // Accept: "8000", "8,000", "8000 bits", "10 KB", "10kb", etc.
     if(!str) return NaN;
     const s = String(str).trim().toLowerCase();
-    // remove common words/units
     const stripped = s
       .replaceAll(",", "")
       .replaceAll("bits", "")
@@ -210,11 +245,10 @@
   }
 
   function approxEqual(a, b){
-    // We expect exact integers here, but allow tiny tolerance
     return Math.abs(a - b) < 1e-9;
   }
 
-  function buildAnswerStepsBits(width, height, depth){
+  function calcImage(width, height, depth){
     const pixels = width * height;
     const bits = pixels * depth;
     const bytes = bits / 8;
@@ -222,171 +256,274 @@
     return { pixels, bits, bytes, kb };
   }
 
-  // Questions (kept easy on purpose)
-  // We include:
-  //  - Q1-3: direct depth
-  //  - Q4-6: colour depth from colours
-  //  - Q7-10: colours + size (mixed)
+  // ---------- question bank ----------
+  // Each question can ask for multiple outputs:
+  // outputs: { key: { label, unit, answer } }
+  // Score: 1 point per question if ALL required outputs are correct (simple GCSE-friendly)
   const qs = [
     {
       id: 1,
-      text: "An image has a resolution of 100 × 100 pixels and a colour depth of 8 bits. Calculate the file size in bits.",
-      tip: "width × height × colour depth",
-      unit: "bits",
-      answer: buildAnswerStepsBits(100, 100, 8).bits,
+      tag: "Size (single)",
+      text: "An image has a resolution of 100 × 100 pixels and a colour depth of 8 bits. Calculate the file size.",
+      tip: "Use width × height × colour depth. Then convert if needed.",
+      outputs: () => {
+        const s = calcImage(100,100,8);
+        return {
+          bits: { label: "File size", unit: "bits", answer: s.bits }
+        };
+      },
       steps: () => {
-        const s = buildAnswerStepsBits(100, 100, 8);
+        const s = calcImage(100,100,8);
         return `Pixels = 100 × 100 = ${s.pixels}\nBits = ${s.pixels} × 8 = ${s.bits}`;
       }
     },
     {
       id: 2,
+      tag: "Size (2 steps)",
       text: "An image has a resolution of 100 × 100 pixels and a colour depth of 8 bits. Calculate the file size in bytes.",
-      tip: "Find bits first, then ÷ 8",
-      unit: "bytes",
-      answer: buildAnswerStepsBits(100, 100, 8).bytes,
+      tip: "Find bits first, then ÷ 8.",
+      outputs: () => {
+        const s = calcImage(100,100,8);
+        return {
+          bits:  { label: "Working (optional)", unit: "bits",  answer: s.bits, optional: true },
+          bytes: { label: "Final answer",       unit: "bytes", answer: s.bytes }
+        };
+      },
       steps: () => {
-        const s = buildAnswerStepsBits(100, 100, 8);
+        const s = calcImage(100,100,8);
         return `Pixels = 100 × 100 = ${s.pixels}\nBits = ${s.pixels} × 8 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}`;
       }
     },
     {
       id: 3,
+      tag: "Size (3 steps)",
       text: "An image has a resolution of 100 × 100 pixels and a colour depth of 8 bits. Calculate the file size in kilobytes (KB).",
-      tip: "bits → bytes → KB (÷ 8 then ÷ 1000)",
-      unit: "KB",
-      answer: buildAnswerStepsBits(100, 100, 8).kb,
+      tip: "bits → bytes → KB (÷ 8 then ÷ 1000).",
+      outputs: () => {
+        const s = calcImage(100,100,8);
+        return {
+          bits:  { label: "Working (optional)", unit: "bits",  answer: s.bits,  optional: true },
+          bytes: { label: "Working (optional)", unit: "bytes", answer: s.bytes, optional: true },
+          kb:    { label: "Final answer",       unit: "KB",    answer: s.kb }
+        };
+      },
       steps: () => {
-        const s = buildAnswerStepsBits(100, 100, 8);
+        const s = calcImage(100,100,8);
         return `Pixels = 100 × 100 = ${s.pixels}\nBits = ${s.pixels} × 8 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}\nKB = ${s.bytes} ÷ 1000 = ${s.kb}`;
       }
     },
 
-    // Colour depth only (5 out of 10 include this skill)
+    // colour depth only (no bits/bytes/kb here — but still "bits" (depth) is relevant)
     {
       id: 4,
+      tag: "Colour depth",
       text: "An image uses 16 colours. Calculate the colour depth in bits.",
-      tip: "2⁴ = 16",
-      unit: "bits",
-      answer: 4,
+      tip: "Find the power of 2: 16 = 2⁴.",
+      outputs: () => ({
+        depth: { label: "Colour depth", unit: "bits", answer: 4 }
+      }),
       steps: () => `16 colours = 2⁴\nColour depth = 4 bits`
     },
     {
       id: 5,
+      tag: "Colour depth",
       text: "An image uses 256 colours. Calculate the colour depth in bits.",
-      tip: "2⁸ = 256",
-      unit: "bits",
-      answer: 8,
+      tip: "256 = 2⁸.",
+      outputs: () => ({
+        depth: { label: "Colour depth", unit: "bits", answer: 8 }
+      }),
       steps: () => `256 colours = 2⁸\nColour depth = 8 bits`
     },
     {
       id: 6,
+      tag: "Colour depth",
       text: "An image uses 4 colours. Calculate the colour depth in bits.",
-      tip: "2² = 4",
-      unit: "bits",
-      answer: 2,
+      tip: "4 = 2².",
+      outputs: () => ({
+        depth: { label: "Colour depth", unit: "bits", answer: 2 }
+      }),
       steps: () => `4 colours = 2²\nColour depth = 2 bits`
     },
 
-    // Mixed: colours + size (make arithmetic clean)
+    // mixed: colours + size; these ask for bits/bytes/KB explicitly (multi-field)
     {
       id: 7,
-      text: "An image uses 16 colours and has a resolution of 100 × 100 pixels. Calculate the file size in bits.",
-      tip: "16 colours = 4 bits, then size formula",
-      unit: "bits",
-      answer: buildAnswerStepsBits(100, 100, 4).bits,
+      tag: "Mixed (bits + bytes)",
+      text: "An image uses 16 colours and has a resolution of 100 × 100 pixels. Calculate the file size in bits and bytes.",
+      tip: "16 colours = 4 bits. Then size formula, then ÷ 8.",
+      outputs: () => {
+        const s = calcImage(100,100,4);
+        return {
+          bits:  { label: "File size", unit: "bits",  answer: s.bits },
+          bytes: { label: "File size", unit: "bytes", answer: s.bytes }
+        };
+      },
       steps: () => {
-        const s = buildAnswerStepsBits(100, 100, 4);
-        return `16 colours = 4 bits\nPixels = 100 × 100 = ${s.pixels}\nBits = ${s.pixels} × 4 = ${s.bits}`;
-      }
-    },
-    {
-      id: 8,
-      text: "An image uses 16 colours and has a resolution of 100 × 100 pixels. Calculate the file size in bytes.",
-      tip: "16 colours = 4 bits, then ÷ 8",
-      unit: "bytes",
-      answer: buildAnswerStepsBits(100, 100, 4).bytes,
-      steps: () => {
-        const s = buildAnswerStepsBits(100, 100, 4);
+        const s = calcImage(100,100,4);
         return `16 colours = 4 bits\nPixels = 100 × 100 = ${s.pixels}\nBits = ${s.pixels} × 4 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}`;
       }
     },
     {
-      id: 9,
-      text: "An image uses 256 colours and has a resolution of 100 × 100 pixels. Calculate the file size in kilobytes (KB).",
-      tip: "256 colours = 8 bits, then ÷ 8 then ÷ 1000",
-      unit: "KB",
-      answer: buildAnswerStepsBits(100, 100, 8).kb,
+      id: 8,
+      tag: "Mixed (bits + bytes + KB)",
+      text: "An image uses 256 colours and has a resolution of 100 × 100 pixels. Calculate the file size in bits, bytes and KB.",
+      tip: "256 colours = 8 bits. Then bits → bytes → KB.",
+      outputs: () => {
+        const s = calcImage(100,100,8);
+        return {
+          bits:  { label: "File size", unit: "bits",  answer: s.bits },
+          bytes: { label: "File size", unit: "bytes", answer: s.bytes },
+          kb:    { label: "File size", unit: "KB",    answer: s.kb }
+        };
+      },
       steps: () => {
-        const s = buildAnswerStepsBits(100, 100, 8);
+        const s = calcImage(100,100,8);
         return `256 colours = 8 bits\nPixels = 100 × 100 = ${s.pixels}\nBits = ${s.pixels} × 8 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}\nKB = ${s.bytes} ÷ 1000 = ${s.kb}`;
       }
     },
     {
-      id: 10,
+      id: 9,
+      tag: "Mixed (bytes only)",
       text: "An image uses 8 colours and has a resolution of 100 × 100 pixels. Calculate the file size in bytes.",
-      tip: "8 colours = 3 bits, then ÷ 8",
-      unit: "bytes",
-      answer: buildAnswerStepsBits(100, 100, 3).bytes,
+      tip: "8 colours = 3 bits. Then ÷ 8.",
+      outputs: () => {
+        const s = calcImage(100,100,3);
+        return {
+          bytes: { label: "File size", unit: "bytes", answer: s.bytes }
+        };
+      },
       steps: () => {
-        const s = buildAnswerStepsBits(100, 100, 3);
+        const s = calcImage(100,100,3);
         return `8 colours = 3 bits\nPixels = 100 × 100 = ${s.pixels}\nBits = ${s.pixels} × 3 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}`;
+      }
+    },
+    {
+      id: 10,
+      tag: "Size (bits + KB)",
+      text: "An image has a resolution of 200 × 100 pixels and a colour depth of 8 bits. Calculate the file size in bits and KB.",
+      tip: "Calculate bits first, then convert to KB.",
+      outputs: () => {
+        const s = calcImage(200,100,8);
+        return {
+          bits: { label: "File size", unit: "bits", answer: s.bits },
+          kb:   { label: "File size", unit: "KB",   answer: s.kb }
+        };
+      },
+      steps: () => {
+        const s = calcImage(200,100,8);
+        return `Pixels = 200 × 100 = ${s.pixels}\nBits = ${s.pixels} × 8 = ${s.bits}\nBytes = ${s.bits} ÷ 8 = ${s.bytes}\nKB = ${s.bytes} ÷ 1000 = ${s.kb}`;
       }
     },
   ];
 
-  // Render questions
+  // ---------- render ----------
   const host = document.getElementById("questions");
 
-  host.innerHTML = qs.map(q => `
-    <div class="q" data-qid="${q.id}">
-      <div class="qhead">
-        <p class="qtitle">${q.id}. ${q.text}</p>
-      </div>
-      <p class="tip"><b>Tip:</b> ${q.tip}</p>
+  function render(){
+    host.innerHTML = qs.map(q => {
+      const outs = q.outputs();
+      const fieldsHtml = Object.entries(outs).map(([key, o]) => {
+        const optText = o.optional ? " (optional)" : "";
+        return `
+          <div class="field">
+            <label for="ans_${q.id}_${key}">${o.label}${optText}:</label>
+            <input id="ans_${q.id}_${key}" type="text" inputmode="decimal" placeholder="Number…" />
+            <span class="unit">${o.unit}</span>
+          </div>
+        `;
+      }).join("");
 
-      <div class="row">
-        <label for="ans_${q.id}"><b>Your answer:</b></label>
-        <input id="ans_${q.id}" type="text" inputmode="decimal" placeholder="Type a number…" />
-        <span class="unit">${q.unit}</span>
-      </div>
+      const correctSummary = Object.entries(outs)
+        .filter(([_, o]) => !o.optional)
+        .map(([_, o]) => `${o.answer} ${o.unit}`)
+        .join(" • ");
 
-      <div class="feedback" id="fb_${q.id}"></div>
+      return `
+        <div class="q" data-qid="${q.id}">
+          <div class="qhead">
+            <p class="qtitle">${q.id}. ${q.text}</p>
+            <span class="tag">${q.tag}</span>
+          </div>
 
-      <details id="det_${q.id}">
-        <summary>Show answer & working</summary>
-        <div class="answerBox">
-          <div><b>Correct answer:</b> <span class="mono">${q.answer}</span> ${q.unit}</div>
-          <pre class="mono" style="margin:8px 0 0; white-space:pre-wrap;">${q.steps()}</pre>
+          <p class="tip"><b>Tip:</b> ${q.tip}</p>
+
+          <div class="inputs">
+            ${fieldsHtml}
+          </div>
+
+          <div class="feedback" id="fb_${q.id}"></div>
+          <div class="mini" id="mini_${q.id}"></div>
+
+          <details id="det_${q.id}">
+            <summary>Show answer & working</summary>
+            <div class="answerBox">
+              <div><b>Correct answers:</b> <span class="mono">${correctSummary}</span></div>
+              <pre class="mono" style="margin:8px 0 0; white-space:pre-wrap;">${q.steps()}</pre>
+            </div>
+          </details>
         </div>
-      </details>
-    </div>
-  `).join("");
+      `;
+    }).join("");
+  }
 
+  render();
+
+  // ---------- checking ----------
   function checkAll(){
     let score = 0;
 
     qs.forEach(q => {
-      const inp = document.getElementById(`ans_${q.id}`);
+      const outs = q.outputs();
       const fb = document.getElementById(`fb_${q.id}`);
-      const userVal = cleanNumber(inp.value);
+      const mini = document.getElementById(`mini_${q.id}`);
 
-      // Some answers are decimals (e.g. 3.0). In this set, everything is neat.
-      const correct = q.answer;
+      let allRequiredCorrect = true;
+      let anyMissingRequired = false;
 
-      if(!Number.isFinite(userVal)){
-        fb.textContent = "✗ Enter a number (no words needed).";
+      const requiredChecks = [];
+
+      for(const [key, o] of Object.entries(outs)){
+        const inp = document.getElementById(`ans_${q.id}_${key}`);
+        const userVal = cleanNumber(inp.value);
+
+        if(o.optional){
+          // Optional fields never block a correct mark; ignore if blank
+          if(String(inp.value).trim() !== "" && Number.isFinite(userVal)){
+            // (Optional) could add feedback per-field, but keeping simple
+          }
+          continue;
+        }
+
+        if(!Number.isFinite(userVal)){
+          anyMissingRequired = true;
+          allRequiredCorrect = false;
+          requiredChecks.push({ ok:false, msg:`Missing ${o.unit}` });
+          continue;
+        }
+
+        const ok = approxEqual(userVal, o.answer);
+        if(!ok) allRequiredCorrect = false;
+        requiredChecks.push({ ok, msg:`${o.unit}` });
+      }
+
+      if(anyMissingRequired){
+        fb.textContent = "✗ Enter a number in every required box.";
         fb.className = "feedback bad";
+        mini.textContent = "Required boxes are the ones without “(optional)”.";
         return;
       }
 
-      if(approxEqual(userVal, correct)){
+      if(allRequiredCorrect){
         fb.textContent = "✓ Correct";
         fb.className = "feedback good";
+        mini.textContent = "";
         score += 1;
-      }else{
-        fb.textContent = `✗ Not quite (check your steps)`;
+      } else {
+        fb.textContent = "✗ Not quite — check your conversions.";
         fb.className = "feedback bad";
+        // quick hint
+        const needsKb = Object.values(outs).some(o => !o.optional && String(o.unit).toLowerCase() === "kb");
+        mini.textContent = needsKb ? "Hint: bits → bytes (÷8) → KB (÷1000)." : "Hint: calculate bits first, then convert.";
       }
     });
 
@@ -401,10 +538,16 @@
 
   function resetAll(){
     qs.forEach(q => {
-      document.getElementById(`ans_${q.id}`).value = "";
+      const outs = q.outputs();
+      for(const key of Object.keys(outs)){
+        const el = document.getElementById(`ans_${q.id}_${key}`);
+        if(el) el.value = "";
+      }
       const fb = document.getElementById(`fb_${q.id}`);
       fb.textContent = "";
       fb.className = "feedback";
+      const mini = document.getElementById(`mini_${q.id}`);
+      mini.textContent = "";
       document.getElementById(`det_${q.id}`).open = false;
     });
     document.getElementById("score").textContent = `Score: 0 / ${qs.length}`;
@@ -415,7 +558,7 @@
   document.getElementById("btnHideAll").addEventListener("click", () => setAllDetails(false));
   document.getElementById("btnReset").addEventListener("click", resetAll);
 
-  // Allow Enter to check
+  // Enter key checks
   document.addEventListener("keydown", (e) => {
     if(e.key === "Enter") checkAll();
   });
